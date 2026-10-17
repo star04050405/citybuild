@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>brick. 盖楼打卡册</title>
+<meta name="theme-color" content="#20180F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="盖楼打卡">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--bg:#241C11;--bg2:#1C150C;--ink:#F5EEDF;--soft:#A6977C;--dim:#6E5F48;--line:#3A2F1D;--card:#2E2516;--gold:#E3B23C}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:linear-gradient(180deg,#2B2213,#1E170D 40%);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;display:flex;justify-content:center;padding:14px 12px calc(40px + env(safe-area-inset-bottom));min-height:100vh;line-height:1.65}
+.wrap{width:100%;max-width:460px}
+/* 头 */
+.head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.head .t{font-family:Georgia,serif;font-style:italic;font-weight:900;font-size:24px;color:var(--ink)}
+.head .t b{color:var(--gold)}
+.head .sub{font-size:9.5px;color:var(--soft);letter-spacing:.3em}
+/* 舞台 */
+.stage{background:radial-gradient(120% 90% at 50% 0%,#332813,#221A0D 70%);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.stage svg{display:block;width:100%;height:auto}
+.stage .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:5}
+.stage .empty .e1{font-family:Georgia,serif;font-style:italic;font-size:19px;color:var(--gold);text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.stage .empty .e2{font-size:11.5px;color:var(--soft);text-shadow:0 1px 6px rgba(0,0,0,.8)}
+.stage .back{position:absolute;left:10px;top:10px;z-index:6;background:rgba(36,28,17,.85);border:1px solid var(--line);color:var(--soft);font-size:10px;letter-spacing:.16em;padding:7px 13px;border-radius:99px;cursor:pointer;backdrop-filter:blur(4px)}
+.stage .back{display:none}.stage.project .back{display:block}
+/* 数据条 */
+.citybar{display:flex;gap:8px;margin:12px 0}
+.cb{flex:1;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 8px;text-align:center}
+.cb .n{font-size:19px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
+.cb .l{font-size:8.5px;color:var(--soft);letter-spacing:.2em;margin-top:1px}
+/* 项目列表 */
+.plist{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.pitem{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:transform .15s}
+.pitem:active{transform:scale(.98)}
+.pitem .sw{width:13px;height:13px;border-radius:4px;flex-shrink:0;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.pitem .nm{flex:1;min-width:0}
+.pitem .nm b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pitem .nm span{display:block;font-size:9.5px;color:var(--soft);font-variant-numeric:tabular-nums}
+.pitem .mini{flex-shrink:0}
+.pitem .mini svg{display:block}
+.pitem .done-ic{color:var(--gold);font-size:15px;flex-shrink:0}
+/* 按钮 */
+.btn{display:block;width:100%;border:none;background:linear-gradient(165deg,#F0C75E,#E3B23C 55%,#C99528);color:#241C11;font-size:14px;font-weight:800;letter-spacing:.12em;padding:14px 0;border-radius:99px;cursor:pointer;font-family:inherit;box-shadow:0 4px 18px rgba(227,178,60,.35),inset 0 2px 0 rgba(255,255,255,.3);transition:transform .15s}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--soft);box-shadow:none;font-weight:600}
+.btn.done-btn{background:linear-gradient(165deg,#8FA98F,#6E8A6E);color:#F5EEDF;box-shadow:0 4px 18px rgba(110,138,110,.25)}
+.btnrow{display:flex;gap:9px;margin-bottom:14px}
+.btnrow .btn{flex:1}
+/* 面板 */
+.mask{position:fixed;inset:0;background:rgba(15,11,6,.72);z-index:50;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+.mask.show{display:flex}
+.panel{width:100%;max-width:460px;background:linear-gradient(175deg,#2E2516,#241C11);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:none;padding:20px 18px calc(24px + env(safe-area-inset-bottom));animation:up .28s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.panel h3{font-family:Georgia,serif;font-style:italic;font-size:18px;color:var(--gold);margin-bottom:14px;text-align:center}
+.lab{font-size:9.5px;letter-spacing:.3em;color:var(--soft);margin:13px 0 7px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1.5px solid var(--line);background:var(--bg2);color:var(--soft);font-size:12px;font-weight:700;padding:8px 15px;border-radius:99px;cursor:pointer;transition:all .15s;font-family:inherit}
+.chip.sel{border-color:var(--gold);color:#241C11;background:var(--gold);box-shadow:0 2px 10px rgba(227,178,60,.35)}
+.chip .cdot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-.5px}
+input[type=text]{width:100%;background:var(--bg2);border:1.5px solid var(--line);border-radius:10px;color:var(--ink);font-size:14px;padding:11px 13px;font-family:inherit;outline:none}
+input[type=text]:focus{border-color:var(--gold)}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg2);color:var(--gold);font-size:18px;font-weight:800;cursor:pointer;font-family:inherit}
+.stepper .v{flex:1;text-align:center;font-size:15px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.stepper .v small{font-size:9px;color:var(--soft);letter-spacing:.2em;display:block;font-weight:400}
+/* 项目页信息 */
+.pinfo{display:flex;gap:8px;margin-bottom:12px}
+.pinfo .cb{flex:1}
+.pname{font-size:16px;font-weight:800;margin-bottom:2px}
+.psub{font-size:10px;color:var(--soft);letter-spacing:.1em;margin-bottom:12px}
+.delrow{margin-top:14px;text-align:center}
+.delrow button{background:transparent;border:none;color:var(--dim);font-size:10px;letter-spacing:.2em;cursor:pointer;text-decoration:underline;font-family:inherit}
+.log{margin-top:12px}
+.log .li{display:flex;justify-content:space-between;font-size:11px;color:var(--soft);padding:7px 2px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.log .li b{color:var(--ink);font-weight:600}
+.toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(30px);background:var(--gold);color:#241C11;font-size:11.5px;font-weight:800;padding:10px 22px;border-radius:99px;opacity:0;transition:all .3s;pointer-events:none;z-index:99;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* 竣工 */
+.party{display:none;margin:12px 0;background:linear-gradient(165deg,#33280F,#241C11);border:2px solid var(--gold);border-radius:12px;padding:18px;text-align:center;box-shadow:0 0 26px rgba(227,178,60,.28);animation:pop .6s cubic-bezier(.2,1.4,.4,1)}
+.party.show{display:block}
+@keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.party .p1{font-family:Georgia,serif;font-style:italic;font-size:21px;color:var(--gold);font-weight:900}
+.party .p2{font-size:11.5px;color:var(--ink);margin-top:6px;letter-spacing:.14em}
+.party .p3{font-size:9.5px;color:var(--soft);margin-top:8px}
+.foot{margin-top:16px;text-align:center;font-size:9px;color:var(--dim);letter-spacing:.22em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><div class="t">brick<b>.</b></div><div class="sub" id="headSub">盖楼打卡 · ISOMETRIC</div></div>
+
+  <div class="stage" id="stage"><div id="svgHost"></div>
+    <div class="back" id="backBtn">‹ 城市全景</div>
+    <div class="empty" id="emptyHint" style="display:none">
+      <div class="e1">空地已平整，等你的第一栋楼</div>
+      <div class="e2">每打卡一次，就往上盖一块砖</div>
+    </div>
+  </div>
+
+  <div id="cityView">
+    <div class="citybar">
+      <div class="cb"><div class="n" id="cB">0</div><div class="l">大楼</div></div>
+      <div class="cb"><div class="n" id="cD">0</div><div class="l">已盖砖数</div></div>
+      <div class="cb"><div class="n" id="cT">0</div><div class="l">已竣工</div></div>
+    </div>
+    <div class="plist" id="plist"></div>
+    <button class="btn" id="newBtn">＋ 买一块地 · 新建打卡楼</button>
+  </div>
+
+  <div id="projView" style="display:none">
+    <div class="pname" id="pName"></div>
+    <div class="psub" id="pSub"></div>
+    <div class="pinfo">
+      <div class="cb"><div class="n" id="pDone">0</div><div class="l">已盖</div></div>
+      <div class="cb"><div class="n" id="pTotal">0</div><div class="l">总计划</div></div>
+      <div class="cb"><div class="n" id="pLeft">0</div><div class="l">剩余</div></div>
+    </div>
+    <div class="party" id="pParty"><div class="p1">🎉 竣工！</div><div class="p2" id="pPartyName"></div><div class="p3">这栋楼每一块砖都是你亲手盖的。<br>开一瓶汽水，然后决定要不要盖下一栋。</div></div>
+    <div class="btnrow">
+      <button class="btn" id="layBtn">🧱 盖一块砖</button>
+    </div>
+    <div class="log" id="logBox"></div>
+    <div class="delrow"><button id="delBtn">拆除这栋楼（清空记录）</button></div>
+  </div>
+
+  <div class="foot">BRICK. · EVERY DAY LAYS A BRICK</div>
+</div>
+
+<div class="mask" id="mask">
+  <div class="panel">
+    <h3>新建打卡楼</h3>
+    <div class="lab">楼的名字</div>
+    <input type="text" id="inName" maxlength="16" placeholder="比如：早起 100 天">
+    <div class="lab">总天数（每 4 块砖 = 一层）</div>
+    <div class="chips" id="dayChips">
+      <button class="chip" data-d="7">7 天</button>
+      <button class="chip" data-d="14">14 天</button>
+      <button class="chip" data-d="30">30 天</button>
+      <button class="chip" data-d="50">50 天</button>
+      <button class="chip sel" data-d="100">100 天</button>
+      <button class="chip" data-d="c">自定义</button>
+    </div>
+    <div class="stepper" id="stepper" style="display:none;margin-top:9px">
+      <button id="dMinus">−</button>
+      <div class="v"><span id="dVal">100</span><small>DAY</small></div>
+      <button id="dPlus">＋</button>
+    </div>
+    <div class="lab">这栋楼的砖色</div>
+    <div class="chips" id="colorChips"></div>
+    <div style="height:16px"></div>
+    <button class="btn" id="createBtn">开工 · 买地盖楼</button>
+    <div style="height:8px"></div>
+    <button class="btn ghost" id="cancelBtn">先想想</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+"use strict";
+/* ===== 数据 ===== */
+var S=null;try{S=window.localStorage}catch(e){}
+function load(){if(!S)return{projects:[]};try{return JSON.parse(S.getItem("iso.city")||'{"projects":[]}')}catch(e){return{projects:[]}}}
+function save(d){if(S)try{S.setItem("iso.city",JSON.stringify(d))}catch(e){}}
+var DB=load();
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function proj(id){return DB.projects.find(function(p){return p.id===id})}
+function $id(x){return document.getElementById(x)}
+var toastT;
+function toast(m){var t=$id("toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("show")},1800)}
+
+/* ===== 颜色 ===== */
+var PALETTE=[
+ {c:"#E8918F",n:"粉珊瑚"},{c:"#7FA9C4",n:"雾霾蓝"},{c:"#9CC5B0",n:"薄荷绿"},
+ {c:"#E8B06A",n:"杏仁黄"},{c:"#C97B8E",n:"莓果"},{c:"#8FA98F",n:"灰绿"},
+ {c:"#D9B96A",n:"麦金"},{c:"#A48BC4",n:"烟紫"}];
+function hex2rgb(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function rgb2hex(r){return "#"+r.map(function(v){v=Math.max(0,Math.min(255,Math.round(v)));return ("0"+v.toString(16)).slice(-2)}).join("")}
+function shade(h,p){var c=hex2rgb(h);return rgb2hex(c.map(function(v){return p>=0?v+(255-v)*p:v*(1+p)}))}
+
+/* ===== 等轴引擎 =====
+   格坐标(gx,gy,z) → 屏幕：cx=(gx-gy)*U; cy=(gx+gy)*U*0.5 - z*ZH */
+function cubeSVG(gx,gy,z,color,opts){
+  opts=opts||{};
+  var U=opts.u||30, ZH=opts.zh||16, X0=opts.x0||0, Y0=opts.y0||0;
+  var cx=X0+(gx-gy)*U, cy=Y0+(gx+gy)*U*0.5-z*ZH;
+  var hw=U, hh=U*0.5, hgt=ZH;
+  var li=opts.li||0;
+  var cTop=shade(color,.28-li*.03), cLeft=shade(color,.02-li*.03), cRight=shade(color,-.24-li*.03);
+  var o=opts.ghost;
+  var s="";
+  if(o){ /* 幽灵块：虚线菱形地基 */
+    s+='<g opacity="0.5">';
+    s+='<polygon points="'+cx+','+(cy-hh)+' '+(cx+hw)+','+cy+' '+cx+','+(cy+hh)+' '+(cx-hw)+','+cy+'" fill="none" stroke="'+o+'" stroke-width="1" stroke-dasharray="3,3"/>';
+    s+='</g>';
+    return s;
+  }
+  s+='<g class="brick'+(opts.drop?" drop":"")+'" style="'+(opts.drop?"animation-delay:"+(opts.delay||0)+"ms":"")+'">';
+  s+='<polygon points="'+(cx-hw)+','+cy+' '+cx+','+(cy-hh)+' '+(cx+hw)+','+cy+' '+cx+','+(cy+hh)+'" fill="'+cTop+'"/>';
+  s+='<polygon points="'+(cx-hw)+','+cy+' '+cx+','+(cy+hh)+' '+cx+','+(cy+hh+hgt)+' '+(cx-hw)+','+(cy+hgt)+'" fill="'+cLeft+'"/>';
+  s+='<polygon points="'+(cx+hw)+','+cy+' '+cx+','+(cy+hh)+' '+cx+','+(cy+hh+hgt)+' '+(cx+hw)+','+(cy+hgt)+'" fill="'+cRight+'"/>';
+  if(opts.pulse){s+='<polygon class="pulse" points="'+cx+','+(cy-hh)+' '+(cx+hw)+','+cy+' '+cx+','+(cy+hh)+' '+(cx-hw)+','+cy+'" fill="none" stroke="'+color+'" stroke-width="2"/>'}
+  s+='</g>';
+  return s;
+}
+function flagSVG(gx,gy,zTop,color,opts){
+  var U=opts.u||30,ZH=opts.zh||16,X0=opts.x0||0,Y0=opts.y0||0;
+  var cx=X0+(gx-gy)*U, cy=Y0+(gx+gy)*U*0.5-zTop*ZH;
+  return '<g class="flag drop"><line x1="'+cx+'" y1="'+cy+'" x2="'+cx+'" y2="'+(cy-26)+'" stroke="#C9B99A" stroke-width="2"/><path d="M'+cx+','+(cy-26)+' L'+(cx+16)+','+(cy-21)+' L'+cx+','+(cy-16)+' Z" fill="'+color+'"/></g>';
+}
+/* 塔楼：2×2 底盘，每层 4 块 */
+function towerSVG(p,opts){
+  opts=opts||{};
+  var done=p.log.length, total=p.total;
+  var layers=Math.ceil(total/4), doneLayers=Math.floor(done/4), rem=done%4;
+  var ghostMax=opts.ghostMax||0;
+  var showLayers=Math.min(layers, doneLayers+(ghostMax?Math.min(ghostMax,layers-doneLayers):0));
+  if(doneLayers>=layers)showLayers=layers;
+  var u0=opts.u||26, zh0=opts.zh||14;
+  var s=Math.min(1, (opts.maxH||300)/((doneLayers+1)*zh0+(4)*u0*0.5+80));
+  var u=u0*s, zh=zh0*s;
+  var w=340, h=showLayers*zh+(2+2)*u*0.5+90;
+  var X0=w/2, Y0=h-64;
+  var s='<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg">';
+  var order=[[0,0],[1,0],[1,1],[0,1]];
+  var lastTopZ=0,lastGX=0,lastGY=0;
+  for(var z=0;z<showLayers;z++){
+    var inLayer=(z<doneLayers)?4:(z===doneLayers?rem:0);
+    for(var q=0;q<4;q++){
+      var gx=order[q][0]+1, gy=order[q][1]+1;
+      var filled=q<inLayer;
+      var isNext=(done<total)&&z===doneLayers&&q===rem;
+      if(filled){
+        s+=cubeSVG(gx,gy,z,p.color,{u:u,zh:zh,x0:X0,y0:Y0,li:z%2,drop:opts.drop&&z===doneLayers,delay:q*90});
+      }else if(isNext){
+        s+=cubeSVG(gx,gy,z,p.color,{u:u,zh:zh,x0:X0,y0:Y0,li:z%2,pulse:true});
+      }else if(z-doneLayers<ghostMax&&doneLayers<layers){
+        s+=cubeSVG(gx,gy,z,p.color,{u:u,zh:zh,x0:X0,y0:Y0,ghost:"rgba(230,210,170,.55)"});
+      }
+    }
+  }
+  if(done>=total){lastTopZ=layers;lastGX=1.5;lastGY=1.5;s+=flagSVG(lastGX,lastGY,lastTopZ,p.color,{u:u,zh:zh,x0:X0,y0:Y0})}
+  s+='<text x="'+X0+'" y="'+(h-8)+'" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-size="13" fill="#A6977C">'+done+' / '+total+(done>=total?' · 🏁':'')+'</text>';
+  s+='</svg>';
+  return s;
+}
+/* 城市全景 */
+function citySVG(){
+  var ps=DB.projects; if(!ps.length)return "";
+  var slots=ps.map(function(_,i){var col=i%3,row=Math.floor(i/3);return {x:col*5.4,y:row*4.6}});
+  var maxX=0,minX=1e9,maxY=0;
+  var u=17,zh=7.5;
+  ps.forEach(function(p,i){
+    var sl=slots[i];
+    var right=sl.x+2+2.8; var bottom=sl.y+2+2.8+Math.ceil(Math.min(p.total,p.log.length)/4)*zh/u*0.5;
+    maxX=Math.max(maxX,(sl.x-right<0?0:0)+(sl.x+2)*1);minX=Math.min(minX,sl.x-2.8);maxY=Math.max(maxY,sl.y+2);
+  });
+  var W=340,H=Math.max(200,slots.length>3?330:230);
+  var X0=W/2-20,Y0=70;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+  /* 地面菱形 */
+  ps.forEach(function(p,i){
+    var sl=slots[i];
+    var cx=X0+((sl.x+.5)-(sl.y+.5))*u, cy=Y0+((sl.x+.5)+(sl.y+.5))*u*0.5;
+    s+='<polygon points="'+cx+','+(cy-9)+' '+(cx+18)+','+cy+' '+cx+','+(cy+9)+' '+(cx-18)+','+cy+'" fill="rgba(230,210,170,.06)" stroke="rgba(230,210,170,.18)" stroke-width="1" stroke-dasharray="3,3"/>';
+  });
+  ps.forEach(function(p,i){
+    var sl=slots[i];var done=p.log.length,total=p.total;
+    var layers=Math.ceil(Math.min(done,total)/4),rem=done%4;
+    var u2=u, zh2=zh;
+    if(layers>6){var s2=Math.min(1,120/(layers*zh));u2=u*s2;zh2=zh*s2}
+    var order=[[0,0],[1,0],[1,1],[0,1]];
+    var baseGX=sl.x+1,baseGY=sl.y+1;
+    for(var z=0;z<layers;z++){
+      var inL=(z<Math.floor(done/4))?4:(z===Math.floor(done/4)?rem:0);
+      for(var q=0;q<inL;q++){
+        s+=cubeSVG(baseGX+order[q][0],baseGY+order[q][1],z,p.color,{u:u2,zh:zh2,x0:X0,y0:Y0,li:z%2});
+      }
+    }
+    if(done>=total){s+=flagSVG(baseGX+.5,baseGY+.5,Math.ceil(total/4),p.color,{u:u2,zh:zh2,x0:X0,y0:Y0})}
+    /* 名牌 */
+    var lx=X0+(baseGX+1-baseGY-1.4)*u, ly=Y0+(baseGX+1+baseGY+1)*u*0.5-Math.ceil(Math.min(done,total)/4)*zh2+30;
+    s+='<text x="'+lx+'" y="'+(ly+34)+'" text-anchor="middle" font-size="9.5" font-family="PingFang SC,sans-serif" fill="#A6977C">'+p.name.substring(0,7)+'</text>';
+  });
+  s+='</svg>';
+  return s;
+}
+
+/* ===== 视图 ===== */
+var curProj=null;
+function renderCity(){
+  curProj=null;
+  var st=$id("stage");st.classList.remove("project");
+  $id("emptyHint").style.display=DB.projects.length?"none":"flex";
+  $id("svgHost").innerHTML=citySVG();
+  $id("cityView").style.display="block";
+  $id("projView").style.display="none";
+  $id("headSub").textContent="盖楼打卡 · "+DB.projects.length+" 栋楼";
+  var totalBricks=0,fin=0;
+  DB.projects.forEach(function(p){totalBricks+=p.log.length;if(p.log.length>=p.total)fin++});
+  $id("cB").textContent=DB.projects.length;$id("cD").textContent=totalBricks;$id("cT").textContent=fin;
+  var html="";
+  DB.projects.forEach(function(p){
+    var d=p.log.length,fin2=d>=p.total;
+    html+='<div class="pitem" data-id="'+p.id+'">'+
+      '<span class="sw" style="background:'+p.color+'"></span>'+
+      '<span class="nm"><b>'+esc(p.name)+(fin2?' <span class="done-ic">🏁</span>':'')+'</b><span>已盖 '+d+' / '+p.total+' 块 · '+Math.round(d*100/p.total)+'%</span></span>'+
+      '<span class="mini">'+towerSVG(p,{u:7,zh:3.6,ghostMax:0,maxH:46})+'</span></div>';
+  });
+  $id("plist").innerHTML=html;
+  document.querySelectorAll(".pitem").forEach(function(el){
+    el.onclick=function(){openProj(el.getAttribute("data-id"))};
+  });
+}
+function openProj(id){
+  curProj=id;
+  var p=proj(id);if(!p){renderCity();return}
+  var st=$id("stage");st.classList.add("project");
+  $id("cityView").style.display="none";
+  $id("projView").style.display="block";
+  var d=p.log.length,fin2=d>=p.total;
+  $id("pName").textContent=p.name;
+  $id("pSub").innerHTML='<span class="cdot" style="display:inline-block;width:9px;height:9px;border-radius:3px;background:'+p.color+';margin-right:5px;vertical-align:-.5px"></span>'+p.total+' 天计划 · 每 4 块砖一层楼';
+  $id("pDone").textContent=d;$id("pTotal").textContent=p.total;$id("pLeft").textContent=Math.max(0,p.total-d);
+  var showDone=d>0?d-1:0;
+  $id("svgHost").innerHTML=towerSVG(p,{u:26,zh:14,ghostMax:3,drop:true});
+  $id("headSub").textContent=p.name+" · 打卡盖楼";
+  $id("pParty").className="party"+(fin2?" show":"");
+  $id("pPartyName").textContent="「"+p.name+"」· "+p.total+" 块砖全部盖完";
+  var lb=$id("layBtn");
+  if(fin2){lb.textContent="🏁 已竣工 · 每天来参观";lb.className="btn done-btn";lb.disabled=true}
+  else{lb.innerHTML="🧱 盖一块砖 · 第 "+(d+1)+" 块";lb.className="btn";lb.disabled=false}
+  var logHtml="";
+  p.log.slice(-6).reverse().forEach(function(dt,i){
+    var n=p.log.length-i;
+    logHtml+='<div class="li"><b>第 '+n+' 块砖</b><span>'+dt+'</span></div>';
+  });
+  $id("logBox").innerHTML=logHtml?'<div class="lab">最近盖的砖</div>'+logHtml:"";
+}
+function esc(s){return s.replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+/* ===== 事件 ===== */
+$id("backBtn").onclick=renderCity;
+$id("newBtn").onclick=function(){
+  $id("inName").value="我的第 "+(DB.projects.length+1)+" 栋楼";
+  $id("mask").classList.add("show");resetPanel();
+};
+$id("cancelBtn").onclick=function(){$id("mask").classList.remove("show")};
+$id("mask").addEventListener("click",function(e){if(e.target===this)this.classList.remove("show")});
+var selDays=100,selColor=PALETTE[0].c,custom=false;
+function resetPanel(){selDays=100;selColor=PALETTE[0].c;custom=false;
+  document.querySelectorAll("#dayChips .chip").forEach(function(c){c.classList.toggle("sel",c.getAttribute("data-d")==="100")});
+  document.querySelectorAll("#colorChips .chip").forEach(function(c,i){c.classList.toggle("sel",i===0)});
+  $id("stepper").style.display="none";$id("dVal").textContent=100;
+}
+document.querySelectorAll("#dayChips .chip").forEach(function(ch){
+  ch.onclick=function(){
+    document.querySelectorAll("#dayChips .chip").forEach(function(c){c.classList.remove("sel")});
+    ch.classList.add("sel");
+    var d=ch.getAttribute("data-d");
+    if(d==="c"){custom=true;$id("stepper").style.display="flex"}
+    else{custom=false;selDays=+d;$id("stepper").style.display="none"}
+  };
+});
+$id("dMinus").onclick=function(){selDays=Math.max(1,selDays-1);$id("dVal").textContent=selDays};
+$id("dPlus").onclick=function(){selDays=Math.min(3650,selDays+1);$id("dVal").textContent=selDays};
+var colorHtml="";PALETTE.forEach(function(p,i){colorHtml+='<button class="chip'+(i===0?" sel":"")+'" data-c="'+p.c+'"><span class="cdot" style="background:'+p.c+'"></span>'+p.n+'</button>'});
+$id("colorChips").innerHTML=colorHtml;
+document.querySelectorAll("#colorChips .chip").forEach(function(ch){
+  ch.onclick=function(){
+    document.querySelectorAll("#colorChips .chip").forEach(function(c){c.classList.remove("sel")});
+    ch.classList.add("sel");selColor=ch.getAttribute("data-c");
+  };
+});
+$id("createBtn").onclick=function(){
+  var name=$id("inName").value.trim()||("我的第 "+(DB.projects.length+1)+" 栋楼");
+  var total=custom?selDays:selDays;
+  DB.projects.push({id:uid(),name:name,total:total,color:selColor,log:[]});
+  save(DB);$id("mask").classList.remove("show");
+  toast("开工！地基已打好");renderCity();
+};
+$id("layBtn").onclick=function(){
+  if(!curProj)return;
+  var p=proj(curProj);if(!p)return;
+  if(p.log.length>=p.total)return;
+  p.log.push(fmtDate(new Date()));
+  save(DB);
+  var justFin=p.log.length>=p.total;
+  openProj(curProj);
+  toast(justFin?"🏁 最后一砖落成 · 竣工！":"🧱 第 "+p.log.length+" 块砖盖好了");
+};
+$id("delBtn").onclick=function(){
+  if(!curProj)return;
+  if(confirm("确定拆除「"+proj(curProj).name+"」？所有打卡记录将清空。")){
+    DB.projects=DB.projects.filter(function(x){return x.id!==curProj});
+    save(DB);toast("已拆除");renderCity();
+  }
+};
+function fmtDate(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+renderCity();
+})();
+</script>
+</body>
+</html>
